@@ -10,58 +10,67 @@ st.title("Smart Charging Trade-off Explorer")
 
 # --- Load experiment data ---
 power_data = pd.read_csv("overall_power_side_results.csv")
-merged_data = power_data.copy()
-merged_data["cost_per_kWh"] = merged_data["energy_cost_all"] / merged_data["total_energy_delivered"]
+
+# Convert to numeric to ensure proper math
+to_numeric_cols = ['energy_cost_all', 'total_energy_delivered', 'proportion_delivered']
+for col in to_numeric_cols:
+    power_data[col] = pd.to_numeric(power_data[col], errors='coerce')
+
+# Filter only static mix scenarios
+power_data = power_data[power_data["CUTOFF_TIME_FOR_RESULTS_MIXING"] == -1].copy()
+
+# Compute cost per kWh using total energy delivered
+power_data["cost_per_kWh"] = power_data["energy_cost_all"] / (power_data["total_energy_delivered"] + 1e-8)
 
 # Round weights for image matching
-merged_data["rounded_weight"] = merged_data["weight_obj_cost"].round().astype(int)
-
-# --- Sidebar ---
-st.sidebar.header("Filter Options")
-scenario_options = merged_data["Traffic-scenario"].unique()
-selected_scenario = st.sidebar.selectbox("Select Traffic Scenario", scenario_options)
-
-# Filter data for selected scenario
-filtered_data = merged_data[merged_data["Traffic-scenario"] == selected_scenario]
+power_data["rounded_weight"] = power_data["weight_obj_cost"].round().astype(int)
 
 # --- Plotting ---
-st.subheader(f"Pareto Front: {selected_scenario}")
-fig, ax = plt.subplots()
-scatter = ax.scatter(
-    filtered_data["cost_per_kWh"],
-    filtered_data["proportion_delivered"],
-    c=filtered_data["weight_obj_cost"],
-    cmap="plasma",
-    picker=True
-)
-ax.set_xlabel("Cost per kWh")
-ax.set_ylabel("Energy Delivered (%)")
-plt.colorbar(scatter, label="Weight")
+st.subheader("Pareto Front (All Scenarios)")
+fig, ax = plt.subplots(figsize=(6, 4))
+
+for scenario, group in power_data.groupby("Traffic-scenario"):
+    color = 'C0' if scenario == "no-accident" else 'C1'
+    marker = 'o' if scenario == "no-accident" else 'x'
+    alpha = 0.3
+    ax.scatter(group["cost_per_kWh"], group["proportion_delivered"], label=f"{scenario} (all)", alpha=alpha, color=color, marker=marker)
+
+    # Draw Pareto front
+    group_sorted = group.sort_values("cost_per_kWh")
+    pareto = []
+    max_y = -float('inf')
+    for _, row in group_sorted.iterrows():
+        if row['proportion_delivered'] > max_y:
+            pareto.append(row)
+            max_y = row['proportion_delivered']
+    pareto_df = pd.DataFrame(pareto)
+    ax.plot(pareto_df["cost_per_kWh"], pareto_df["proportion_delivered"], label=f"{scenario} (Pareto)", linewidth=2, color=color)
+
+ax.set_xlabel("Mean TOU Cost ($/kWh)")
+ax.set_ylabel("Energy demand met (%)")
+ax.set_xlim(0, 0.15)
+ax.set_ylim(65, 105)
+ax.grid(True, alpha=0.2)
+ax.legend(fontsize=8, loc="lower center")
 st.pyplot(fig)
 
 # --- User selection from coordinates ---
 st.subheader("Explore by Clicked Coordinates")
-x_clicked = st.number_input("X: Cost per kWh", min_value=0.0, step=0.01, value=7.06)
+x_clicked = st.number_input("X: Cost per kWh", min_value=0.0, step=0.001, value=0.07)
 y_clicked = st.number_input("Y: Energy Delivered (%)", min_value=0.0, max_value=100.0, step=0.1, value=100.0)
 
-# Match closest point
-filtered_data["distance"] = ((filtered_data["cost_per_kWh"] - x_clicked)**2 + (filtered_data["proportion_delivered"] - y_clicked)**2)**0.5
-closest = filtered_data.sort_values("distance").iloc[0]
+# Always use no-accident data to find closest match
+filtered_base = power_data[power_data["Traffic-scenario"] == "no-accident"].copy()
+filtered_base["distance"] = ((filtered_base["cost_per_kWh"] - x_clicked)**2 + (filtered_base["proportion_delivered"] - y_clicked)**2)**0.5
+closest = filtered_base.sort_values("distance").iloc[0]
 matched_weight = int(closest['weight_obj_cost'])
 
-# --- Display match info ---
-st.markdown(f"**Matched weight:** {matched_weight}, Delivered: {closest['proportion_delivered']:.2f}%, TOU cost: ${closest['energy_cost_all']:.2f}, Energy Delivered: {closest['total_energy_delivered']:.2f} kWh")
+st.markdown(f"**Clicked:** X={x_clicked:.3f}, Y={y_clicked:.2f}")
+st.markdown(f"**Matched weight:** {matched_weight}")
 
-# --- Load and show both scenario images ---
-image_folder = "images"
-base_img_filename = f"combined_plot_1300kW_weight_{matched_weight}.pdf"
-
-scenario_acc = "45-mins-accident-1-capacity-remaining-start-10am"
-scenario_nacc = "no-accident"
-
-# --- Get matching data from both scenarios ---
-data_acc = merged_data[(merged_data["Traffic-scenario"] == scenario_acc) & (merged_data["weight_obj_cost"] == matched_weight)]
-data_nacc = merged_data[(merged_data["Traffic-scenario"] == scenario_nacc) & (merged_data["weight_obj_cost"] == matched_weight)]
+# --- Get both scenarios with matched weight ---
+data_acc = power_data[(power_data["Traffic-scenario"] == "45-mins-accident-1-capacity-remaining-start-10am") & (power_data["weight_obj_cost"] == matched_weight)]
+data_nacc = power_data[(power_data["Traffic-scenario"] == "no-accident") & (power_data["weight_obj_cost"] == matched_weight)]
 
 col1, col2 = st.columns(2)
 
