@@ -1,51 +1,87 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 from PIL import Image
 
-# --- Title and Intro ---
+# --- App config ---
 st.set_page_config(layout="wide")
-st.title("Interactive Exploration of Smart Charging Trade-offs")
-st.markdown("""
-This tool visualizes the trade-off between minimizing **TOU cost** and maximizing **total energy demand met** 
-for a range of optimization weightings. Each point represents a smart-charging solution.
+st.title("Smart Charging Trade-off Explorer")
 
-Use the sidebar to choose a scenario or select a point from the scatter plot to view the corresponding solution image.
-""")
+# --- Load experiment data ---
+data = pd.read_csv("data.csv")
 
-# --- Sidebar: Scenario selection (placeholder for future expansion) ---
-with st.sidebar:
-    st.header("Scenario Selector")
-    selected_scenario = st.selectbox("Scenario", ["45-mins-accident-1-start-10am"], index=0)
+# Load total energy delivered for each scenario
+power_data = pd.read_csv("overall_power_side_results.csv")
+total_energy_delivered = power_data[["Traffic-scenario", "weight_obj_cost", "energy_delivered"]]
 
-# --- Load and plot Pareto front data (placeholder example) ---
-st.subheader("Pareto Front: Cost vs. Energy Demand Met")
+# Merge to get correct denominator for cost/kWh
+merged_data = pd.merge(data, total_energy_delivered, on=["Traffic-scenario", "weight_obj_cost"], how="left")
 
-# Fake data for illustration (replace with actual)
-weights = [1,2,3,4,10,15,20,25,30,35,50,60,70,80,100,120,150,160] + list(range(170, 300, 5)) + [350,450,700,1000,10000]
-costs = [0.12 - 0.00001*w if w < 1000 else 0.04 for w in weights]  # synthetic TOU cost
-energy_met = [70 + 0.02*w if w < 1000 else 98 for w in weights]     # synthetic energy demand met
+# Compute cost per kWh using energy delivered (not proportion)
+merged_data["cost_per_kWh"] = merged_data["energy_cost_all"] / merged_data["energy_delivered"]
 
-pareto_df = pd.DataFrame({"Weight": weights, "Cost": costs, "EnergyMet": energy_met})
+# Round weights for image matching
+merged_data["rounded_weight"] = merged_data["weight_obj_cost"].round().astype(int)
 
+# --- Sidebar ---
+st.sidebar.header("Filter Options")
+scenario_options = merged_data["Traffic-scenario"].unique()
+selected_scenario = st.sidebar.selectbox("Select Traffic Scenario", scenario_options)
+
+# Filter data for selected scenario
+filtered_data = merged_data[merged_data["Traffic-scenario"] == selected_scenario]
+
+# --- Plotting ---
+st.subheader(f"Pareto Front: {selected_scenario}")
 fig, ax = plt.subplots()
-scatter = ax.scatter(pareto_df["Cost"], pareto_df["EnergyMet"], picker=True, c="blue")
-ax.set_xlabel("Mean TOU Cost ($/kWh)")
-ax.set_ylabel("Energy Demand Met (%)")
+scatter = ax.scatter(filtered_data["cost_per_kWh"], filtered_data["proportion_delivered"], c=filtered_data["weight_obj_cost"], cmap="plasma", picker=True)
+ax.set_xlabel("Cost per kWh")
+ax.set_ylabel("Energy Delivered (%)")
+plt.colorbar(scatter, label="Weight")
 st.pyplot(fig)
 
-# --- User click handling ---
-st.subheader("Selected Solution")
-clicked_index = st.number_input("Enter index of point (temporary until click enabled):", min_value=0, max_value=len(pareto_df)-1, value=0)
-selected_weight = pareto_df.iloc[clicked_index]["Weight"]
-st.markdown(f"**Selected Weight:** {selected_weight}")
+# --- User selection from coordinates ---
+st.subheader("Explore by Clicked Coordinates")
+x_clicked = st.number_input("X: Cost per kWh", min_value=0.0, step=0.01, value=7.06)
+y_clicked = st.number_input("Y: Energy Delivered (%)", min_value=0.0, max_value=100.0, step=0.1, value=100.0)
 
-# --- Display corresponding image (placeholder) ---
-# You can later map weights to image filenames, e.g., weight_30.png, etc.
-image_path = f"images/solution_weight_{int(selected_weight)}.png"  # replace with actual
+# Match closest point
+filtered_data["distance"] = ((filtered_data["cost_per_kWh"] - x_clicked)**2 + (filtered_data["proportion_delivered"] - y_clicked)**2)**0.5
+closest = filtered_data.sort_values("distance").iloc[0]
+matched_weight = int(closest['weight_obj_cost'])
 
-try:
-    img = Image.open(image_path)
-    st.image(img, caption=f"Smart-charging solution for weight = {int(selected_weight)}")
-except FileNotFoundError:
-    st.warning(f"No image found for weight = {int(selected_weight)}. Please upload the corresponding image.")
+# --- Display match info ---
+st.markdown(f"**Matched weight:** {matched_weight}, Delivered: {closest['proportion_delivered']:.2f}%, TOU cost: ${closest['energy_cost_all']:.2f}, Energy Delivered: {closest['energy_delivered']:.2f} kWh")
+
+# --- Load and show both scenario images ---
+image_folder = "images"
+base_img_filename = f"combined_plot_1300kW_weight_{matched_weight}.pdf"
+image_path_base = os.path.join(image_folder, base_img_filename)
+
+scenario_acc = "45-mins-accident-1-capacity-remaining-start-10am"
+scenario_nacc = "no-accident"
+
+# --- Get matching data from both scenarios ---
+data_acc = merged_data[(merged_data["Traffic-scenario"] == scenario_acc) & (merged_data["weight_obj_cost"] == matched_weight)]
+data_nacc = merged_data[(merged_data["Traffic-scenario"] == scenario_nacc) & (merged_data["weight_obj_cost"] == matched_weight)]
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("**No-Accident Scenario**")
+    try:
+        st.image(f"images/combined_plot_1300kW_weight_{matched_weight}.pdf", use_column_width=True)
+    except:
+        st.warning("Image not found.")
+    if not data_nacc.empty:
+        st.write(data_nacc.iloc[0])
+
+with col2:
+    st.markdown("**Accident Scenario**")
+    try:
+        st.image(f"images/combined_plot_1300kW_weight_{matched_weight}.pdf", use_column_width=True)
+    except:
+        st.warning("Image not found.")
+    if not data_acc.empty:
+        st.write(data_acc.iloc[0])
