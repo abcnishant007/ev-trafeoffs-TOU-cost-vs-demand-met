@@ -32,12 +32,12 @@ valid_weights = [1, 2, 3, 4, 10, 15, 20, 25, 30, 35, 50, 60, 70, 80, 100, 120, 1
                  700, 1000, 10000]
 
 # Format weight labels in exponential format for better readability on slider
-exp_labels = [f"{w:.0e}" if w >= 1000 else str(w) for w in valid_weights]
+exp_labels = [f"{w:.0e}" for w in valid_weights]
 label_to_weight = dict(zip(exp_labels, valid_weights))
 
 # --- User selection from pre-defined slider ---
 st.subheader("Select a Weight Value for TOU cost (Total energy is set to 30)")
-selected_label = st.select_slider("Weight (Objective: Cost)", options=exp_labels, value="1e+02")
+selected_label = st.select_slider("Weight (Objective: Cost)", options=exp_labels, value=f"{100:.0e}")
 matched_weight = label_to_weight[selected_label]
 
 # --- Plotting ---
