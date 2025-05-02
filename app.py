@@ -73,7 +73,7 @@ ax.set_xlim(0, 0.15)
 ax.set_ylim(65, 105)
 ax.grid(True, alpha=0.2)
 ax.legend(fontsize=4, loc="lower center")
-ax.tight_layout()
+# ax.tight_layout()
 st.pyplot(fig)
 
 # --- Get both scenarios with matched weight ---
