@@ -9,7 +9,7 @@ st.set_page_config(layout="wide")
 st.title("Smart Charging Trade-off Explorer")
 
 # --- Load experiment data ---
-data = pd.read_csv("data.csv")
+# data = pd.read_csv("data.csv")
 
 # Load total energy delivered for each scenario
 power_data = pd.read_csv("overall_power_side_results.csv")
