@@ -66,8 +66,10 @@ highlight_point = power_data[(power_data["Traffic-scenario"] == "no-accident") &
 if not highlight_point.empty:
     ax.scatter(highlight_point["cost_per_kWh"], highlight_point["proportion_delivered"], color="black", edgecolor="white", s=100, label="Selected", zorder=5)
 
-ax.set_xlabel("Mean TOU Cost ($/kWh)", fontsize=4)
-ax.set_ylabel("Energy demand met (%)", fontsize=4)
+ax.set_xlabel("Mean TOU Cost ($/kWh)", fontsize=6)
+ax.set_ylabel("Energy demand met (%)", fontsize=6)
+ax.set_xticks(fontsize=6)
+ax.set_yticks(fontsize=6)
 ax.set_xlim(0, 0.15)
 ax.set_ylim(65, 105)
 ax.grid(True, alpha=0.2)
