@@ -72,7 +72,7 @@ ax.tick_params(axis='both', labelsize=6)
 ax.set_xlim(0, 0.15)
 ax.set_ylim(65, 105)
 ax.grid(True, alpha=0.2)
-ax.legend(fontsize=6, loc="lower center")
+ax.legend(fontsize=4, loc="lower center")
 st.pyplot(fig)
 
 # --- Get both scenarios with matched weight ---
