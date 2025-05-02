@@ -90,7 +90,7 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.markdown("**No-Accident Scenario**")
-    image_path = f"images/jpg_output/d_-1_no-accidentOffline-cap-1300-runnum-1_weight_{matched_weight}.jpg"
+    image_path = f"images/jpg_output/d_-1_no-accidentOffline-cap-1300-runnum-1_weight_{matched_weight}_page_1.jpg"
     st.markdown(f"_Image path: `{image_path}`_")
     if os.path.exists(image_path):
         st.image(image_path, use_container_width=True)
@@ -101,7 +101,7 @@ with col1:
 
 with col2:
     st.markdown("**Accident Scenario**")
-    image_path = f"images/jpg_output/d_-1_45-mins-accident-1-capacity-remaining-start-10amOffline-cap-1300-runnum-1_weight_{matched_weight}.jpg"    
+    image_path = f"images/jpg_output/d_-1_45-mins-accident-1-capacity-remaining-start-10amOffline-cap-1300-runnum-1_weight_{matched_weight}_page_1.jpg"    
     st.markdown(f"_Image path: `{image_path}`_")
     if os.path.exists(image_path):
         st.image(image_path, use_container_width=True)
