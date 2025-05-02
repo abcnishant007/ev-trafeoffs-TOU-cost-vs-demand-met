@@ -42,7 +42,7 @@ matched_weight = label_to_weight[selected_label]
 
 # --- Plotting ---
 st.subheader("Pareto Front (All Scenarios)")
-fig, ax = plt.subplots(figsize=(5,5), dpi=300)
+fig, ax = plt.subplots(figsize=(3,3), dpi=300)
 
 for scenario, group in power_data.groupby("Traffic-scenario"):
     color = 'C0' if scenario == "no-accident" else 'C1'
@@ -73,6 +73,7 @@ ax.set_xlim(0, 0.15)
 ax.set_ylim(65, 105)
 ax.grid(True, alpha=0.2)
 ax.legend(fontsize=4, loc="lower center")
+ax.tight_layout()
 st.pyplot(fig)
 
 # --- Get both scenarios with matched weight ---
