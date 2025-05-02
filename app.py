@@ -84,7 +84,7 @@ cols_to_display = [
     "Traffic-scenario", "Transformer-capacity", "Scenario", "Algorithm", "Run_number",
     "weight_obj_cost", "proportion_delivered", "demands_fully_met", "peak_current",
     "demand_charge", "energy_cost_all", "total_energy_delivered",
-    "total_energy_requested", 
+    "total_energy_requested", ]
 
 col1, col2 = st.columns(2)
 
