@@ -82,7 +82,7 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.markdown("**No-Accident Scenario**")
-    image_path = f"images/combined_plot_1300kW_weight_{matched_weight}.pdf"
+    image_path = f"images/combined_plot_1300kW_weight_{matched_weight}.png"
     st.markdown(f"_Image path: `{image_path}`_")
     try:
         st.image(image_path, use_container_width=True)
