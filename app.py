@@ -37,7 +37,7 @@ selected_label = st.select_slider("Weight (Objective: Cost)", options=exp_labels
 matched_weight = label_to_weight[selected_label]
 
 # --- Plot Pareto front ---
-fig, ax = plt.subplots(figsize=(4.5, 3), dpi=250)
+fig, ax = plt.subplots(figsize=(2.5, 1.5), dpi=100)
 for scenario, group in power_data.groupby("Traffic-scenario"):
     color = 'C0' if scenario == "no-accident" else 'C1'
     marker = 'o' if scenario == "no-accident" else 'x'
