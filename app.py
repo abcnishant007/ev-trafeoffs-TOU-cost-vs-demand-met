@@ -24,11 +24,16 @@ power_data["cost_per_kWh"] = power_data["energy_cost_all"] / (power_data["total_
 
 # Round weights for slider and image matching
 power_data["rounded_weight"] = power_data["weight_obj_cost"].round().astype(int)
-unique_weights = sorted(power_data["rounded_weight"].unique())
+
+# --- Predefined valid weights only ---
+valid_weights = [1, 2, 3, 4, 10, 15, 20, 25, 30, 35, 50, 60, 70, 80, 100, 120, 150, 160,
+                 170, 175, 180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230, 235,
+                 240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 350, 450,
+                 700, 1000, 10000]
 
 # --- User selection from pre-defined slider ---
 st.subheader("Select a Weight Value")
-matched_weight = st.slider("Weight (Objective: Cost)", min_value=min(unique_weights), max_value=max(unique_weights), step=1, value=100, format="%d")
+matched_weight = st.select_slider("Weight (Objective: Cost)", options=valid_weights, value=100)
 
 # --- Plotting ---
 st.subheader("Pareto Front (All Scenarios)")
