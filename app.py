@@ -31,13 +31,18 @@ valid_weights = [1, 2, 3, 4, 10, 15, 20, 25, 30, 35, 50, 60, 70, 80, 100, 120, 1
                  240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 350, 450,
                  700, 1000, 10000]
 
+# Format weight labels in exponential format for better readability on slider
+exp_labels = [f"{w:.0e}" if w >= 1000 else str(w) for w in valid_weights]
+label_to_weight = dict(zip(exp_labels, valid_weights))
+
 # --- User selection from pre-defined slider ---
-st.subheader("Select a Weight Value")
-matched_weight = st.select_slider("Weight (Objective: Cost)", options=valid_weights, value=100)
+st.subheader("Select a Weight Value for TOU cost (Total energy is set to 30)")
+selected_label = st.select_slider("Weight (Objective: Cost)", options=exp_labels, value="1e+02")
+matched_weight = label_to_weight[selected_label]
 
 # --- Plotting ---
 st.subheader("Pareto Front (All Scenarios)")
-fig, ax = plt.subplots(figsize=(6, 4))
+fig, ax = plt.subplots(figsize=(3.5, 2.5))
 
 for scenario, group in power_data.groupby("Traffic-scenario"):
     color = 'C0' if scenario == "no-accident" else 'C1'
