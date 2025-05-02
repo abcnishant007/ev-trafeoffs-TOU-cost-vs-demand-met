@@ -19,7 +19,7 @@ total_energy_delivered = power_data[["Traffic-scenario", "weight_obj_cost", "ene
 merged_data = pd.merge(data, total_energy_delivered, on=["Traffic-scenario", "weight_obj_cost"], how="left")
 
 # Compute cost per kWh using energy delivered (not proportion)
-merged_data["cost_per_kWh"] = merged_data["energy_cost_all"] / merged_data["energy_delivered"]
+merged_data["cost_per_kWh"] = merged_data["energy_cost_all"] / merged_data["total_energy_delivered"]
 
 # Round weights for image matching
 merged_data["rounded_weight"] = merged_data["weight_obj_cost"].round().astype(int)
