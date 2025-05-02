@@ -81,10 +81,10 @@ data_nacc = power_data[(power_data["Traffic-scenario"] == "no-accident") & (powe
 
 # Columns to show only
 cols_to_display = [
-    "Traffic-scenario", "Transformer-capacity", "Scenario", "Algorithm", "Run_number",
-    "weight_obj_cost", "proportion_delivered", "demands_fully_met", "peak_current",
-    "demand_charge", "energy_cost_all", "total_energy_delivered",
-    "total_energy_requested", ]
+    "Traffic-scenario", "Transformer-capacity", "Scenario",
+    "weight_obj_cost", "proportion_delivered", "total_energy_delivered",
+    "total_energy_requested", "demands_fully_met",
+   "energy_cost_all"]
 
 col1, col2 = st.columns(2)
 
