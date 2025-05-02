@@ -42,7 +42,7 @@ matched_weight = label_to_weight[selected_label]
 
 # --- Plotting ---
 st.subheader("Pareto Front (All Scenarios)")
-fig, ax = plt.subplots(figsize=(3.5, 2.2), dpi=150)
+fig, ax = plt.subplots(figsize=(2.5, 1.2), dpi=300)
 
 for scenario, group in power_data.groupby("Traffic-scenario"):
     color = 'C0' if scenario == "no-accident" else 'C1'
@@ -66,13 +66,13 @@ highlight_point = power_data[(power_data["Traffic-scenario"] == "no-accident") &
 if not highlight_point.empty:
     ax.scatter(highlight_point["cost_per_kWh"], highlight_point["proportion_delivered"], color="black", edgecolor="white", s=100, label="Selected", zorder=5)
 
-ax.set_xlabel("Mean TOU Cost ($/kWh)", fontsize=6)
-ax.set_ylabel("Energy demand met (%)", fontsize=6)
-ax.tick_params(axis='both', labelsize=6)
+ax.set_xlabel("Mean TOU Cost ($/kWh)", fontsize=4)
+ax.set_ylabel("Energy demand met (%)", fontsize=4)
+ax.tick_params(axis='both', labelsize=4)
 ax.set_xlim(0, 0.15)
 ax.set_ylim(65, 105)
 ax.grid(True, alpha=0.2)
-ax.legend(fontsize=6, loc="lower center")
+ax.legend(fontsize=4, loc="lower center")
 st.pyplot(fig)
 
 # --- Get both scenarios with matched weight ---
