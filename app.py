@@ -13,7 +13,7 @@ st.title("Smart Charging Trade-off Explorer")
 
 # Load total energy delivered for each scenario
 power_data = pd.read_csv("overall_power_side_results.csv")
-total_energy_delivered = power_data[["Traffic-scenario", "weight_obj_cost", "energy_delivered"]]
+total_energy_delivered = power_data[["Traffic-scenario", "weight_obj_cost", "total_energy_delivered"]]
 
 # Merge to get correct denominator for cost/kWh
 merged_data = pd.merge(data, total_energy_delivered, on=["Traffic-scenario", "weight_obj_cost"], how="left")
