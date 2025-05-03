@@ -30,7 +30,7 @@ st.markdown("""
 > - The ratio shown below is \\( \\frac{W_{\\text{TOU}}}{W_{\\text{TED}}} \\)
 """)
 
-# --- Pareto Plot ---
+# --- Build Plot ---
 st.subheader("Click on a Point to View Scenario Comparison")
 
 fig = go.Figure()
@@ -39,7 +39,7 @@ marker_map = {
     "45-mins-accident-1-capacity-remaining-start-10am": "x"
 }
 
-# Add points per scenario
+# Scatter points
 for scenario, group in power_data.groupby("Traffic-scenario"):
     symbol = marker_map.get(scenario, "circle")
     fig.add_trace(go.Scatter(
@@ -52,7 +52,7 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
         hovertemplate="Ratio (TOU/TED): %{customdata:.2f}<extra></extra>",
     ))
 
-# Add Pareto lines
+# Pareto curves
 for scenario, group in power_data.groupby("Traffic-scenario"):
     group_sorted = group.sort_values("cost_per_kWh")
     pareto = []
@@ -79,18 +79,22 @@ fig.update_layout(
     margin=dict(l=10, r=10, t=30, b=20)
 )
 
-# --- Plot and handle interaction ---
+# --- Initialize session state once ---
 if "selected_weight" not in st.session_state:
-    st.session_state.selected_weight = 100  # default
+    st.session_state.selected_weight = 100
 
+# --- Handle interaction ---
 clicked_points = plotly_events(fig, click_event=True, override_height=360)
 
-if clicked_points and isinstance(clicked_points[0], dict) and "customdata" in clicked_points[0]:
+if clicked_points and isinstance(clicked_points[0], dict):
     try:
-        st.session_state.selected_weight = int(clicked_points[0]["customdata"])
+        weight_val = clicked_points[0]["customdata"]
+        if weight_val is not None:
+            st.session_state.selected_weight = int(float(weight_val))
     except Exception:
         pass
 
+# --- Use selected value ---
 selected_weight = st.session_state.selected_weight
 st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}** (Weight: {selected_weight})")
 
@@ -106,7 +110,7 @@ def display_image_autoscaled(path, caption=""):
         """
         st.markdown(html, unsafe_allow_html=True)
 
-# --- Filter data ---
+# --- Get matched scenarios ---
 data_acc = power_data[
     (power_data["Traffic-scenario"] == "45-mins-accident-1-capacity-remaining-start-10am") &
     (power_data["rounded_weight"] == selected_weight)
@@ -122,7 +126,7 @@ cols_to_display = [
     "demands_fully_met", "energy_cost_all"
 ]
 
-# --- Scenario comparison ---
+# --- Side-by-side comparison ---
 st.subheader("Scenario Comparison")
 col1, col2 = st.columns(2)
 
