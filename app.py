@@ -25,26 +25,58 @@ power_data["cost_per_kWh"] = power_data["energy_cost_all"] / (power_data["total_
 power_data["rounded_weight"] = power_data["weight_obj_cost"].round().astype(int)
 
 # --- Plotly Pareto plot ---
+# --- Enhanced Pareto Plot with hover, sizing, curve overlays ---
 st.subheader("Click on a Point to View Scenario Comparison")
 
-fig = px.scatter(
-    power_data,
-    x="cost_per_kWh",
-    y="proportion_delivered",
-    color="Traffic-scenario",
-    symbol="Traffic-scenario",
-    hover_data=["rounded_weight", "Scenario", "Transformer-capacity"],
-    labels={
-        "cost_per_kWh": "Mean TOU Cost ($/kWh)",
-        "proportion_delivered": "Energy Demand Met (%)"
-    },
-    title="Interactive Pareto Front (Click a point to explore)"
+# Add weight ratio
+power_data["weight_ratio"] = power_data["weight_obj_cost"] / 30
+
+fig = go.Figure()
+
+# Add points per scenario
+for scenario, group in power_data.groupby("Traffic-scenario"):
+    fig.add_trace(go.Scatter(
+        x=group["cost_per_kWh"],
+        y=group["proportion_delivered"],
+        mode="markers",
+        name=scenario,
+        marker=dict(
+            size=group["weight_ratio"] * 4,  # tweak scaling if needed
+            opacity=0.6,
+            sizemode="diameter"
+        ),
+        customdata=group[["rounded_weight"]],
+        hovertemplate="Weight Ratio: %{customdata[0]/30:.2f}<extra></extra>",
+    ))
+
+# Add Pareto curves
+for scenario, group in power_data.groupby("Traffic-scenario"):
+    group_sorted = group.sort_values("cost_per_kWh")
+    pareto = []
+    max_y = -float("inf")
+    for _, row in group_sorted.iterrows():
+        if row["proportion_delivered"] > max_y:
+            pareto.append(row)
+            max_y = row["proportion_delivered"]
+    pareto_df = pd.DataFrame(pareto)
+    fig.add_trace(go.Scatter(
+        x=pareto_df["cost_per_kWh"],
+        y=pareto_df["proportion_delivered"],
+        mode="lines",
+        name=f"{scenario} Pareto",
+        line=dict(width=2),
+        hoverinfo="skip"
+    ))
+
+fig.update_layout(
+    xaxis=dict(title="TOU Cost ($/kWh)", range=[0, 0.15]),
+    yaxis=dict(title="Energy Demand Met (%)", range=[65, 105]),
+    height=420,
+    legend=dict(font=dict(size=10)),
+    margin=dict(l=20, r=20, t=40, b=20)
 )
 
-fig.update_traces(marker=dict(size=8, opacity=0.6))
-fig.update_layout(height=400, legend=dict(font=dict(size=10)))
-
-selected = st.plotly_chart(fig, use_container_width=True, click_events=True)
+selected = st.plotly_chart(fig, use_container_width=True)
 
 # --- Capture click event from Plotly ---
 clicked_point = st.session_state.get("clicked_weight", None)
