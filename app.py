@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-from PIL import Image
+from PIL import Imagemark
 from base64 import b64encode
 import plotly.graph_objects as go
 
@@ -96,6 +96,12 @@ if clicked is not None and "points" in clicked:
         st.session_state.last_clicked = clicked_weight
 
 selected_weight = st.session_state.last_clicked
+# Safe fallback and conversion
+try:
+    selected_weight = int(float(st.session_state.last_clicked)) if st.session_state.last_clicked else 100
+except Exception:
+    selected_weight = 100
+
 st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}** (Weight: {selected_weight})")
 
 # --- Custom function to auto-scale images ---
