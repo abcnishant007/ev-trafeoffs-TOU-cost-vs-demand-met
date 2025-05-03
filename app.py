@@ -101,6 +101,12 @@ if clicked is not None and "points" in clicked:
         st.session_state.last_clicked = clicked_weight
 
 selected_weight = st.session_state.last_clicked
+# --- Safe fallback for selected_weight ---
+try:
+    selected_weight = int(float(st.session_state.last_clicked))
+except Exception:
+    selected_weight = 100  # fallback default
+
 st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}** (Weight: {selected_weight})")
 
 # --- Custom function to auto-scale images ---
