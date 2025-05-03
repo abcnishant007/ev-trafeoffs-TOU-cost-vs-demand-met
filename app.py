@@ -94,8 +94,8 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
 fig.update_layout(
     xaxis=dict(title="TOU Cost ($/kWh)", range=[0, 0.15]),
     yaxis=dict(title="Energy Demand Met (%)", range=[65, 105]),
-    height=360,
-    width=720, 
+    height=540,
+    width=1080, 
     legend=dict(font=dict(size=10)),
     # margin=dict(l=20, r=10, t=30, b=30)
 )
