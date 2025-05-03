@@ -27,12 +27,12 @@ st.markdown("""
 > **Note:**  
 > - **TOU** = *Time-of-Use energy cost weighting*  
 > - **TED** = *Total Energy Delivered weighting*  
-> - TED is fixed at 30.  
 > - The ratio shown below is \\( \\frac{W_{\\text{TOU}}}{W_{\\text{TED}}} \\)
 """)
+# > - TED is fixed at 30.  
 
 # --- Build Plot ---
-st.subheader("Click on a Point to View Scenario Comparison")
+st.subheader("Click on any point to view the corresponding charging profiles")
 
 fig = go.Figure()
 
