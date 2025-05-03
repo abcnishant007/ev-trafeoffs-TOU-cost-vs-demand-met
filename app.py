@@ -10,17 +10,13 @@ from streamlit_plotly_events import plotly_events
 st.set_page_config(layout="wide")
 st.title("Smart Charging Trade-off Explorer")
 
-# --- Load data ---
+# --- Load and preprocess data ---
 power_data = pd.read_csv("overall_power_side_results.csv")
 
-# Convert to numeric
 for col in ['energy_cost_all', 'total_energy_delivered', 'proportion_delivered', 'weight_obj_cost']:
     power_data[col] = pd.to_numeric(power_data[col], errors='coerce')
 
-# Filter static mix
 power_data = power_data[power_data["CUTOFF_TIME_FOR_RESULTS_MIXING"] == -1].copy()
-
-# Compute derived columns
 power_data["cost_per_kWh"] = power_data["energy_cost_all"] / (power_data["total_energy_delivered"] + 1e-8)
 power_data["rounded_weight"] = power_data["weight_obj_cost"].round().astype(int)
 power_data["ratio_TOU_TED"] = power_data["weight_obj_cost"] / 30
@@ -34,7 +30,7 @@ st.markdown("""
 > - The ratio shown below is \\( \\frac{W_{\\text{TOU}}}{W_{\\text{TED}}} \\)
 """)
 
-# --- Interactive Pareto Plot ---
+# --- Pareto plot ---
 st.subheader("Click on a Point to View Scenario Comparison")
 
 fig = go.Figure()
@@ -44,7 +40,6 @@ marker_map = {
     "45-mins-accident-1-capacity-remaining-start-10am": "x"
 }
 
-# Scatter points
 for scenario, group in power_data.groupby("Traffic-scenario"):
     marker_symbol = marker_map.get(scenario, "circle")
     fig.add_trace(go.Scatter(
@@ -53,11 +48,10 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
         mode="markers",
         name=scenario,
         marker=dict(size=1, opacity=0.6, symbol=marker_symbol),
-        customdata=group["weight_obj_cost"],  # Flat value
+        customdata=group["weight_obj_cost"],
         hovertemplate="Ratio (TOU/TED): %{customdata:.2f}<extra></extra>",
     ))
 
-# Pareto curves
 for scenario, group in power_data.groupby("Traffic-scenario"):
     group_sorted = group.sort_values("cost_per_kWh")
     pareto = []
@@ -84,27 +78,22 @@ fig.update_layout(
     margin=dict(l=10, r=10, t=30, b=20)
 )
 
-# --- Capture click ---
+# --- Click handling ---
+if "last_clicked" not in st.session_state:
+    st.session_state.last_clicked = 100  # default
+
 clicked_points = plotly_events(fig, click_event=True, override_height=360)
 
-# --- Handle selection safely ---
-selected_weight = None
-if clicked_points and isinstance(clicked_points[0], dict):
-    point = clicked_points[0]
-    if "customdata" in point:
-        try:
-            selected_weight = int(point["customdata"])
-            st.session_state.last_clicked = selected_weight
-        except (ValueError, TypeError):
-            pass
+if clicked_points and isinstance(clicked_points[0], dict) and "customdata" in clicked_points[0]:
+    try:
+        st.session_state.last_clicked = int(clicked_points[0]["customdata"])
+    except Exception:
+        pass
 
-if selected_weight is None:
-    selected_weight = st.session_state.get("last_clicked", 100)
-
-# Display selection
+selected_weight = st.session_state.last_clicked
 st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}** (Weight: {selected_weight})")
 
-# --- Auto-scale image display ---
+# --- Display helper ---
 def display_image_autoscaled(path, caption=""):
     with open(path, "rb") as f:
         encoded = b64encode(f.read()).decode()
@@ -116,7 +105,7 @@ def display_image_autoscaled(path, caption=""):
         """
         st.markdown(html, unsafe_allow_html=True)
 
-# --- Filter data ---
+# --- Scenario filtering ---
 data_acc = power_data[
     (power_data["Traffic-scenario"] == "45-mins-accident-1-capacity-remaining-start-10am") &
     (power_data["rounded_weight"] == selected_weight)
@@ -132,15 +121,15 @@ cols_to_display = [
     "demands_fully_met", "energy_cost_all"
 ]
 
-# --- Side-by-side display ---
+# --- Side-by-side scenario comparison ---
 st.subheader("Scenario Comparison")
 col1, col2 = st.columns(2)
 
 with col1:
     st.markdown("**No-Accident Scenario**")
-    path = f"images/jpg_output/d_-1_no-accidentOffline-cap-1300-runnum-1_weight_{selected_weight}_page1.jpg"
-    if os.path.exists(path):
-        display_image_autoscaled(path, caption="No-Accident Scenario")
+    path_nacc = f"images/jpg_output/d_-1_no-accidentOffline-cap-1300-runnum-1_weight_{selected_weight}_page1.jpg"
+    if os.path.exists(path_nacc):
+        display_image_autoscaled(path_nacc, caption="No-Accident Scenario")
     else:
         st.warning("Image not found.")
     if not data_nacc.empty:
@@ -148,9 +137,9 @@ with col1:
 
 with col2:
     st.markdown("**Accident Scenario**")
-    path = f"images/jpg_output/d_-1_45-mins-accident-1-capacity-remaining-start-10amOffline-cap-1300-runnum-1_weight_{selected_weight}_page1.jpg"
-    if os.path.exists(path):
-        display_image_autoscaled(path, caption="Accident Scenario")
+    path_acc = f"images/jpg_output/d_-1_45-mins-accident-1-capacity-remaining-start-10amOffline-cap-1300-runnum-1_weight_{selected_weight}_page1.jpg"
+    if os.path.exists(path_acc):
+        display_image_autoscaled(path_acc, caption="Accident Scenario")
     else:
         st.warning("Image not found.")
     if not data_acc.empty:
