@@ -44,19 +44,20 @@ marker_map = {
     "45-mins-accident-1-capacity-remaining-start-10am": "x"
 }
 
-# Add scatter points
+# Scatter points
 for scenario, group in power_data.groupby("Traffic-scenario"):
+    marker_symbol = marker_map.get(scenario, "circle")
     fig.add_trace(go.Scatter(
         x=group["cost_per_kWh"],
         y=group["proportion_delivered"],
         mode="markers",
         name=scenario,
-        marker=dict(size=1, opacity=0.6, symbol=marker_map.get(scenario, "circle")),
-        customdata=group[["weight_obj_cost"]],
-        hovertemplate="Ratio (TOU/TED): %{customdata[0]/30:.2f}<extra></extra>",
+        marker=dict(size=1, opacity=0.6, symbol=marker_symbol),
+        customdata=group["weight_obj_cost"],  # <-- flat structure
+        hovertemplate="Ratio (TOU/TED): %{customdata:.2f}<extra></extra>",
     ))
 
-# Add Pareto curves
+# Pareto curves
 for scenario, group in power_data.groupby("Traffic-scenario"):
     group_sorted = group.sort_values("cost_per_kWh")
     pareto = []
@@ -83,12 +84,11 @@ fig.update_layout(
     margin=dict(l=10, r=10, t=30, b=20)
 )
 
-# --- Capture click ---
+# --- Capture plot click ---
 clicked_points = plotly_events(fig, click_event=True, override_height=360)
 
-# --- Get selected weight ---
 if clicked_points:
-    selected_weight = int(clicked_points[0]["customdata"][0])
+    selected_weight = int(clicked_points[0]["customdata"])
     st.session_state.last_clicked = selected_weight
 elif "last_clicked" in st.session_state:
     selected_weight = st.session_state.last_clicked
@@ -97,11 +97,10 @@ else:
 
 st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}** (Weight: {selected_weight})")
 
-# --- Display helper function ---
+# --- Display helper ---
 def display_image_autoscaled(path, caption=""):
     with open(path, "rb") as f:
-        data = f.read()
-        encoded = b64encode(data).decode()
+        encoded = b64encode(f.read()).decode()
         html = f"""
         <div style='max-width:100%; height:auto; text-align:center;'>
             <img src='data:image/jpeg;base64,{encoded}' style='width:100%; height:auto; border-radius:6px;' alt='Image'>
@@ -110,7 +109,7 @@ def display_image_autoscaled(path, caption=""):
         """
         st.markdown(html, unsafe_allow_html=True)
 
-# --- Filter data ---
+# --- Filter selected data ---
 data_acc = power_data[
     (power_data["Traffic-scenario"] == "45-mins-accident-1-capacity-remaining-start-10am") &
     (power_data["rounded_weight"] == selected_weight)
