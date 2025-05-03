@@ -32,78 +32,72 @@ st.latex(r"\frac{W_{\text{TOU}}}{W_{\text{TED}}}")
 # --- Build Plot ---
 st.subheader("Click on a Point to View Scenario Comparison")
 
-fig = go.Figure()
+# --- Place chart in an isolated container ---
+with st.container():
+    fig = go.Figure()
+    marker_map = {
+        "no-accident": ("circle", "#FFA500"),
+        "45-mins-accident-1-capacity-remaining-start-10am": ("x", "#1f77b4"),
+    }
+    grey_color = "rgba(120,120,120,0.3)"
 
-# Marker types and colors
-marker_map = {
-    "no-accident": ("circle", "#FFA500"),      # orange
-    "45-mins-accident-1-capacity-remaining-start-10am": ("x", "#1f77b4"),  # tab:blue
-}
-grey_color = "rgba(120,120,120,0.3)"  # non-Pareto blobs
+    for scenario, group in power_data.groupby("Traffic-scenario"):
+        symbol, _ = marker_map.get(scenario, ("circle", grey_color))
+        fig.add_trace(go.Scatter(
+            x=group["cost_per_kWh"],
+            y=group["proportion_delivered"],
+            mode="markers",
+            name=f"{scenario} (non-Pareto)",
+            marker=dict(size=6, opacity=0.3, symbol=symbol, color=grey_color),
+            hovertext=group["weight_obj_cost"].round(2).astype(str),
+            hovertemplate="TOU/TED Weight: %{hovertext}<extra></extra>",
+            showlegend=False
+        ))
 
-# Scatter blobs (non-Pareto)
-for scenario, group in power_data.groupby("Traffic-scenario"):
-    symbol, _ = marker_map.get(scenario, ("circle", grey_color))
-    fig.add_trace(go.Scatter(
-        x=group["cost_per_kWh"],
-        y=group["proportion_delivered"],
-        mode="markers",
-        name=f"{scenario} (non-Pareto)",
-        marker=dict(size=6, opacity=0.3, symbol=symbol, color=grey_color),
-        hovertext=group["weight_obj_cost"].round(2).astype(str),
-        hovertemplate="TOU/TED Weight: %{hovertext}<extra></extra>",
-        showlegend=False
-    ))
+    for scenario, group in power_data.groupby("Traffic-scenario"):
+        symbol, color = marker_map.get(scenario, ("circle", "#000000"))
+        group_sorted = group.sort_values("cost_per_kWh")
+        pareto = []
+        max_y = -float("inf")
+        for _, row in group_sorted.iterrows():
+            if row["proportion_delivered"] > max_y:
+                pareto.append(row)
+                max_y = row["proportion_delivered"]
+        pareto_df = pd.DataFrame(pareto)
 
-# Pareto curves and highlighted points
-for scenario, group in power_data.groupby("Traffic-scenario"):
-    symbol, color = marker_map.get(scenario, ("circle", "#000000"))
-    group_sorted = group.sort_values("cost_per_kWh")
-    pareto = []
-    max_y = -float("inf")
-    for _, row in group_sorted.iterrows():
-        if row["proportion_delivered"] > max_y:
-            pareto.append(row)
-            max_y = row["proportion_delivered"]
-    pareto_df = pd.DataFrame(pareto)
+        fig.add_trace(go.Scatter(
+            x=pareto_df["cost_per_kWh"],
+            y=pareto_df["proportion_delivered"],
+            mode="lines",
+            name=f"{scenario} Pareto",
+            line=dict(width=2, color=color),
+            hoverinfo="skip"
+        ))
+        fig.add_trace(go.Scatter(
+            x=pareto_df["cost_per_kWh"],
+            y=pareto_df["proportion_delivered"],
+            mode="markers",
+            name=f"{scenario} Pareto Points",
+            marker=dict(size=6, symbol=symbol, color=color),
+            hovertext=pareto_df["weight_obj_cost"].round(2).astype(str),
+            hovertemplate="TOU/TED Weight: %{hovertext}<extra></extra>",
+            showlegend=False
+        ))
 
-    # Pareto line
-    fig.add_trace(go.Scatter(
-        x=pareto_df["cost_per_kWh"],
-        y=pareto_df["proportion_delivered"],
-        mode="lines",
-        name=f"{scenario} Pareto",
-        line=dict(width=2, color=color),
-        hoverinfo="skip"
-    ))
+    fig.update_layout(
+        xaxis=dict(title="TOU Cost ($/kWh)", range=[0, 0.15]),
+        yaxis=dict(title="Energy Demand Met (%)", range=[65, 105]),
+        height=500,
+        width=900,
+        legend=dict(font=dict(size=10), orientation="v", x=1, y=1),
+        margin=dict(l=60, r=60, t=40, b=60)
+    )
 
-    # Pareto points
-    fig.add_trace(go.Scatter(
-        x=pareto_df["cost_per_kWh"],
-        y=pareto_df["proportion_delivered"],
-        mode="markers",
-        name=f"{scenario} Pareto Points",
-        marker=dict(size=6, symbol=symbol, color=color),
-        hovertext=pareto_df["weight_obj_cost"].round(2).astype(str),
-        hovertemplate="TOU/TED Weight: %{hovertext}<extra></extra>",
-        showlegend=False
-    ))
+    # Do not update layout above this point to avoid rerenders
 
-fig.update_layout(
-    xaxis=dict(title="TOU Cost ($/kWh)", range=[0, 0.15]),
-    yaxis=dict(title="Energy Demand Met (%)", range=[65, 105]),
-    height=500,
-    width=900,
-    legend=dict(font=dict(size=10), orientation="v", x=1, y=1),
-    margin=dict(l=60, r=60, t=40, b=60)
-)
+    # Handle click without st.write or scroll
+    clicked_points = plotly_events(fig, click_event=True, override_height=360)
 
-# --- Initialize session state ---
-if "selected_weight" not in st.session_state:
-    st.session_state.selected_weight = 100
-
-# --- Click interaction using pointIndex ---
-clicked_points = plotly_events(fig, click_event=True, override_height=360)
 if clicked_points and isinstance(clicked_points[0], dict):
     try:
         point_index = clicked_points[0].get("pointIndex")
@@ -113,7 +107,7 @@ if clicked_points and isinstance(clicked_points[0], dict):
     except Exception as e:
         st.error(f"Error extracting clicked weight using pointIndex: {e}")
 
-# --- Show selected ratio only ---
+# 🧷 Show final selected ratio separately (stabilizes page)
 selected_weight = st.session_state.selected_weight
 st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}**")
 
