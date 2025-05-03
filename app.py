@@ -55,7 +55,7 @@ if "last_clicked" not in st.session_state:
 
 clicked = st.experimental_data_editor(pd.DataFrame(), key="plot_click")
 
-if clicked and "points" in clicked:
+if clicked is not None and "points" in clicked:
     for point in clicked["points"]:
         clicked_weight = point["customdata"][0]  # Extract rounded_weight
         st.session_state.last_clicked = clicked_weight
