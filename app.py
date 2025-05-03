@@ -53,7 +53,7 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
         mode="markers",
         name=scenario,
         marker=dict(size=1, opacity=0.6, symbol=marker_symbol),
-        customdata=group["weight_obj_cost"],  # <-- flat structure
+        customdata=group["weight_obj_cost"],  # Flat value
         hovertemplate="Ratio (TOU/TED): %{customdata:.2f}<extra></extra>",
     ))
 
@@ -84,20 +84,27 @@ fig.update_layout(
     margin=dict(l=10, r=10, t=30, b=20)
 )
 
-# --- Capture plot click ---
+# --- Capture click ---
 clicked_points = plotly_events(fig, click_event=True, override_height=360)
 
-if clicked_points:
-    selected_weight = int(clicked_points[0]["customdata"])
-    st.session_state.last_clicked = selected_weight
-elif "last_clicked" in st.session_state:
-    selected_weight = st.session_state.last_clicked
-else:
-    selected_weight = 100
+# --- Handle selection safely ---
+selected_weight = None
+if clicked_points and isinstance(clicked_points[0], dict):
+    point = clicked_points[0]
+    if "customdata" in point:
+        try:
+            selected_weight = int(point["customdata"])
+            st.session_state.last_clicked = selected_weight
+        except (ValueError, TypeError):
+            pass
 
+if selected_weight is None:
+    selected_weight = st.session_state.get("last_clicked", 100)
+
+# Display selection
 st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}** (Weight: {selected_weight})")
 
-# --- Display helper ---
+# --- Auto-scale image display ---
 def display_image_autoscaled(path, caption=""):
     with open(path, "rb") as f:
         encoded = b64encode(f.read()).decode()
@@ -109,7 +116,7 @@ def display_image_autoscaled(path, caption=""):
         """
         st.markdown(html, unsafe_allow_html=True)
 
-# --- Filter selected data ---
+# --- Filter data ---
 data_acc = power_data[
     (power_data["Traffic-scenario"] == "45-mins-accident-1-capacity-remaining-start-10am") &
     (power_data["rounded_weight"] == selected_weight)
@@ -125,7 +132,7 @@ cols_to_display = [
     "demands_fully_met", "energy_cost_all"
 ]
 
-# --- Side-by-side comparison ---
+# --- Side-by-side display ---
 st.subheader("Scenario Comparison")
 col1, col2 = st.columns(2)
 
