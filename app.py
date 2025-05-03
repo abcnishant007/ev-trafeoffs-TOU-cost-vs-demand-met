@@ -87,11 +87,69 @@ fig.update_layout(
     margin=dict(l=10, r=10, t=30, b=20)
 )
 
-st.plotly_chart(fig, use_container_width=True)
+# --- Interactive Pareto Plot with Click Handling ---
+st.subheader("Click on a Point to View Scenario Comparison")
 
-# --- Handle click event ---
-if "last_clicked" not in st.session_state:
-    st.session_state.last_clicked = 100  # default
+fig = go.Figure()
+
+# Marker style based on scenario
+marker_map = {
+    "no-accident": "circle",
+    "45-mins-accident-1-capacity-remaining-start-10am": "x"
+}
+
+for scenario, group in power_data.groupby("Traffic-scenario"):
+    marker_symbol = marker_map.get(scenario, "circle")
+    fig.add_trace(go.Scatter(
+        x=group["cost_per_kWh"],
+        y=group["proportion_delivered"],
+        mode="markers",
+        name=scenario,
+        marker=dict(size=1, opacity=0.6, symbol=marker_symbol),
+        customdata=group[["weight_obj_cost"]],
+        hovertemplate="Ratio (TOU/TED): %{customdata[0]/30:.2f}<extra></extra>",
+    ))
+
+# Add Pareto curves
+for scenario, group in power_data.groupby("Traffic-scenario"):
+    group_sorted = group.sort_values("cost_per_kWh")
+    pareto = []
+    max_y = -float("inf")
+    for _, row in group_sorted.iterrows():
+        if row["proportion_delivered"] > max_y:
+            pareto.append(row)
+            max_y = row["proportion_delivered"]
+    pareto_df = pd.DataFrame(pareto)
+    fig.add_trace(go.Scatter(
+        x=pareto_df["cost_per_kWh"],
+        y=pareto_df["proportion_delivered"],
+        mode="lines",
+        name=f"{scenario} Pareto",
+        line=dict(width=2),
+        hoverinfo="skip"
+    ))
+
+fig.update_layout(
+    xaxis=dict(title="TOU Cost ($/kWh)", range=[0, 0.15]),
+    yaxis=dict(title="Energy Demand Met (%)", range=[65, 105]),
+    height=360,
+    legend=dict(font=dict(size=10)),
+    margin=dict(l=10, r=10, t=30, b=20)
+)
+
+# Capture plot click
+clicked_points = plotly_events(fig, click_event=True, override_height=360)
+
+# Update session state
+if clicked_points:
+    selected_weight = int(clicked_points[0]["customdata"][0])
+    st.session_state.last_clicked = selected_weight
+elif "last_clicked" in st.session_state:
+    selected_weight = st.session_state.last_clicked
+else:
+    selected_weight = 100
+
+st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}** (Weight: {selected_weight})")
 
 clicked = st.experimental_data_editor(pd.DataFrame(), key="plot_click")
 if clicked is not None and "points" in clicked:
