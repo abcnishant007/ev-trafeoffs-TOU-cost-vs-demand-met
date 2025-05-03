@@ -3,7 +3,6 @@ import pandas as pd
 import os
 from PIL import Image
 from base64 import b64encode
-import plotly.express as px
 import plotly.graph_objects as go
 
 # --- App config ---
@@ -20,20 +19,26 @@ for col in ['energy_cost_all', 'total_energy_delivered', 'proportion_delivered',
 # Filter static mix
 power_data = power_data[power_data["CUTOFF_TIME_FOR_RESULTS_MIXING"] == -1].copy()
 
-# Compute cost per kWh
+# Compute derived columns
 power_data["cost_per_kWh"] = power_data["energy_cost_all"] / (power_data["total_energy_delivered"] + 1e-8)
 power_data["rounded_weight"] = power_data["weight_obj_cost"].round().astype(int)
+power_data["ratio_TOU_TED"] = power_data["weight_obj_cost"] / 30
 
-# --- Plotly Pareto plot ---
-# --- Enhanced Pareto Plot with hover, sizing, curve overlays ---
+# --- Abbreviation Explanation ---
+st.markdown("""
+> **Note:**  
+> - **TOU** = *Time-of-Use energy cost weighting*  
+> - **TED** = *Total Energy Delivered weighting*  
+> - TED is fixed at 30.  
+> - The ratio shown in the plot is \\( \\frac{W_{\\text{TOU}}}{W_{\\text{TED}}} \\)
+""")
+
+# --- Interactive Pareto Plot ---
 st.subheader("Click on a Point to View Scenario Comparison")
-
-# Add weight ratio
-power_data["weight_ratio"] = power_data["weight_obj_cost"] / 30
 
 fig = go.Figure()
 
-# Add points per scenario
+# Add points for each traffic scenario
 for scenario, group in power_data.groupby("Traffic-scenario"):
     fig.add_trace(go.Scatter(
         x=group["cost_per_kWh"],
@@ -41,15 +46,15 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
         mode="markers",
         name=scenario,
         marker=dict(
-            size=1, # np.log(group["weight_ratio"] + 10),  # tweak scaling if needed
+            size=group["ratio_TOU_TED"] * 4,  # Scale as needed
             opacity=0.6,
             sizemode="diameter"
         ),
-        customdata=group[["rounded_weight"]],
-        hovertemplate="Weight Ratio: %{customdata[0]/30:.2f}<extra></extra>",
+        customdata=group[["ratio_TOU_TED"]],
+        hovertemplate="Ratio (TOU/TED): %{customdata[0]:.2f}<extra></extra>",
     ))
 
-# Add Pareto curves
+# Add Pareto front curves
 for scenario, group in power_data.groupby("Traffic-scenario"):
     group_sorted = group.sort_values("cost_per_kWh")
     pareto = []
@@ -76,26 +81,22 @@ fig.update_layout(
     margin=dict(l=20, r=20, t=40, b=20)
 )
 
-selected = st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True)
 
-# --- Capture click event from Plotly ---
-clicked_point = st.session_state.get("clicked_weight", None)
-
-# Custom Streamlit Plotly click capture (works only in streamlit >= 1.29)
+# --- Handle click interaction ---
 if "last_clicked" not in st.session_state:
-    st.session_state.last_clicked = None
+    st.session_state.last_clicked = 100  # Default
 
 clicked = st.experimental_data_editor(pd.DataFrame(), key="plot_click")
 
 if clicked is not None and "points" in clicked:
     for point in clicked["points"]:
-        clicked_weight = point["customdata"][0]  # Extract rounded_weight
+        clicked_ratio = point["customdata"][0]
+        clicked_weight = int(clicked_ratio * 30)
         st.session_state.last_clicked = clicked_weight
 
-# Fallback if no point is clicked
-selected_weight = st.session_state.last_clicked or 100
-
-st.info(f"Showing results for selected weight: {selected_weight}")
+selected_weight = st.session_state.last_clicked
+st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}** (Weight: {selected_weight})")
 
 # --- Custom function to auto-scale images ---
 def display_image_autoscaled(path, caption=""):
@@ -111,10 +112,14 @@ def display_image_autoscaled(path, caption=""):
         st.markdown(image_html, unsafe_allow_html=True)
 
 # --- Get matched scenarios ---
-data_acc = power_data[(power_data["Traffic-scenario"] == "45-mins-accident-1-capacity-remaining-start-10am") &
-                      (power_data["rounded_weight"] == selected_weight)]
-data_nacc = power_data[(power_data["Traffic-scenario"] == "no-accident") &
-                       (power_data["rounded_weight"] == selected_weight)]
+data_acc = power_data[
+    (power_data["Traffic-scenario"] == "45-mins-accident-1-capacity-remaining-start-10am") &
+    (power_data["rounded_weight"] == selected_weight)
+]
+data_nacc = power_data[
+    (power_data["Traffic-scenario"] == "no-accident") &
+    (power_data["rounded_weight"] == selected_weight)
+]
 
 cols_to_display = [
     "Traffic-scenario", "Transformer-capacity", "Scenario", "weight_obj_cost",
