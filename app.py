@@ -46,7 +46,7 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
         mode="markers",
         name=scenario,
         marker=dict(
-            size=group["ratio_TOU_TED"] * 4,  # Scale as needed
+            size=4 , # group["ratio_TOU_TED"] * 4,  # Scale as needed
             opacity=0.6,
             sizemode="diameter"
         ),
