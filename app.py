@@ -23,13 +23,11 @@ power_data["ratio_TOU_TED"] = power_data["weight_obj_cost"] / 30
 power_data = power_data.reset_index(drop=True)
 
 # --- Abbreviation note ---
-st.markdown("""
-> **Note:**  
-> - **TOU** = *Time-of-Use energy cost weighting*  
-> - **TED** = *Total Energy Delivered weighting*  
-> - TED is fixed at 30.  
-> - The ratio shown below is \\( \\frac{W_{\\text{TOU}}}{W_{\\text{TED}}} \\)
-""")
+st.markdown("> **Note:**")
+st.markdown("- **TOU** = *Time-of-Use energy cost weighting*")  
+st.markdown("- **TED** = *Total Energy Delivered weighting*")  
+st.markdown("- The ratio shown below is:")
+st.latex(r"\frac{W_{\text{TOU}}}{W_{\text{TED}}}")
 
 # --- Build Plot ---
 st.subheader("Click on a Point to View Scenario Comparison")
@@ -94,9 +92,10 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
 fig.update_layout(
     xaxis=dict(title="TOU Cost ($/kWh)", range=[0, 0.15]),
     yaxis=dict(title="Energy Demand Met (%)", range=[65, 105]),
-    height=360,
-    legend=dict(font=dict(size=10)),
-    margin=dict(l=10, r=10, t=30, b=20)
+    height=500,
+    width=900,
+    legend=dict(font=dict(size=10), orientation="v", x=1, y=1),
+    margin=dict(l=60, r=60, t=40, b=60)
 )
 
 # --- Initialize session state ---
