@@ -30,7 +30,7 @@ st.markdown("""
 > - **TOU** = *Time-of-Use energy cost weighting*  
 > - **TED** = *Total Energy Delivered weighting*  
 > - TED is fixed at 30.  
-> - The ratio shown in the plot is \\( \\frac{W_{\\text{TOU}}}{W_{\\text{TED}}} \\)
+> - The ratio shown below is \\( \\frac{W_{\\text{TOU}}}{W_{\\text{TED}}} \\)
 """)
 
 # --- Interactive Pareto Plot ---
@@ -38,23 +38,29 @@ st.subheader("Click on a Point to View Scenario Comparison")
 
 fig = go.Figure()
 
-# Add points for each traffic scenario
+# Assign markers by scenario
+marker_map = {
+    "no-accident": "circle",
+    "45-mins-accident-1-capacity-remaining-start-10am": "x"
+}
+
 for scenario, group in power_data.groupby("Traffic-scenario"):
+    marker_symbol = marker_map.get(scenario, "circle")
     fig.add_trace(go.Scatter(
         x=group["cost_per_kWh"],
         y=group["proportion_delivered"],
         mode="markers",
         name=scenario,
         marker=dict(
-            size=4 , # group["ratio_TOU_TED"] * 4,  # Scale as needed
+            size=1,
             opacity=0.6,
-            sizemode="diameter"
+            symbol=marker_symbol
         ),
         customdata=group[["ratio_TOU_TED"]],
         hovertemplate="Ratio (TOU/TED): %{customdata[0]:.2f}<extra></extra>",
     ))
 
-# Add Pareto front curves
+# Add Pareto curves
 for scenario, group in power_data.groupby("Traffic-scenario"):
     group_sorted = group.sort_values("cost_per_kWh")
     pareto = []
@@ -76,19 +82,18 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
 fig.update_layout(
     xaxis=dict(title="TOU Cost ($/kWh)", range=[0, 0.15]),
     yaxis=dict(title="Energy Demand Met (%)", range=[65, 105]),
-    height=420,
+    height=360,
     legend=dict(font=dict(size=10)),
-    margin=dict(l=20, r=20, t=40, b=20)
+    margin=dict(l=10, r=10, t=30, b=20)
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
-# --- Handle click interaction ---
+# --- Handle click event ---
 if "last_clicked" not in st.session_state:
-    st.session_state.last_clicked = 100  # Default
+    st.session_state.last_clicked = 100  # default
 
 clicked = st.experimental_data_editor(pd.DataFrame(), key="plot_click")
-
 if clicked is not None and "points" in clicked:
     for point in clicked["points"]:
         clicked_ratio = point["customdata"][0]
@@ -96,12 +101,6 @@ if clicked is not None and "points" in clicked:
         st.session_state.last_clicked = clicked_weight
 
 selected_weight = st.session_state.last_clicked
-# Safe fallback and conversion
-try:
-    selected_weight = int(float(st.session_state.last_clicked)) if st.session_state.last_clicked else 100
-except Exception:
-    selected_weight = 100
-
 st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}** (Weight: {selected_weight})")
 
 # --- Custom function to auto-scale images ---
@@ -128,7 +127,7 @@ data_nacc = power_data[
 ]
 
 cols_to_display = [
-    "Traffic-scenario", "Transformer-capacity", "Scenario", "weight_obj_cost",
+    "Traffic-scenario", "Transformer-capacity", "Scenario", "ratio_TOU_TED",
     "proportion_delivered", "total_energy_delivered", "total_energy_requested",
     "demands_fully_met", "energy_cost_all"
 ]
