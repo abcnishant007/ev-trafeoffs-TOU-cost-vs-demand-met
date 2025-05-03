@@ -47,7 +47,7 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
         y=group["proportion_delivered"],
         mode="markers",
         name=scenario,
-        marker=dict(size=1, opacity=0.6, symbol=symbol),
+        marker=dict(size=6, opacity=0.6, symbol=symbol),
         customdata=group["weight_obj_cost"],
         hovertemplate="Ratio (TOU/TED): %{customdata:.2f}<extra></extra>",
     ))
@@ -74,27 +74,26 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
 fig.update_layout(
     xaxis=dict(title="TOU Cost ($/kWh)", range=[0, 0.15]),
     yaxis=dict(title="Energy Demand Met (%)", range=[65, 105]),
-    height=360,
+    height=400,
     legend=dict(font=dict(size=10)),
     margin=dict(l=10, r=10, t=30, b=20)
 )
 
-# --- Initialize session state once ---
+# --- Initialize state
 if "selected_weight" not in st.session_state:
-    st.session_state.selected_weight = 100
+    st.session_state.selected_weight = 100  # fallback default
 
-# --- Handle interaction ---
-clicked_points = plotly_events(fig, click_event=True, override_height=360)
+# --- Draw plot and capture click
+clicked_points = plotly_events(fig, click_event=True, override_height=400)
 
 if clicked_points and isinstance(clicked_points[0], dict):
     try:
-        weight_val = clicked_points[0]["customdata"]
-        if weight_val is not None:
-            st.session_state.selected_weight = int(float(weight_val))
+        new_weight = int(float(clicked_points[0]["customdata"]))
+        st.session_state.selected_weight = new_weight
     except Exception:
         pass
 
-# --- Use selected value ---
+# --- Current selection ---
 selected_weight = st.session_state.selected_weight
 st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}** (Weight: {selected_weight})")
 
