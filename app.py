@@ -30,7 +30,7 @@ st.markdown("""
 > - The ratio shown below is \\( \\frac{W_{\\text{TOU}}}{W_{\\text{TED}}} \\)
 """)
 
-# --- Pareto plot ---
+# --- Pareto Plot ---
 st.subheader("Click on a Point to View Scenario Comparison")
 
 fig = go.Figure()
@@ -39,19 +39,20 @@ marker_map = {
     "45-mins-accident-1-capacity-remaining-start-10am": "x"
 }
 
+# Add points per scenario
 for scenario, group in power_data.groupby("Traffic-scenario"):
-    marker_symbol = marker_map.get(scenario, "circle")
+    symbol = marker_map.get(scenario, "circle")
     fig.add_trace(go.Scatter(
         x=group["cost_per_kWh"],
         y=group["proportion_delivered"],
         mode="markers",
         name=scenario,
-        marker=dict(size=1, opacity=0.6, symbol=marker_symbol),
+        marker=dict(size=1, opacity=0.6, symbol=symbol),
         customdata=group["weight_obj_cost"],
         hovertemplate="Ratio (TOU/TED): %{customdata:.2f}<extra></extra>",
     ))
 
-# Add Pareto curves
+# Add Pareto lines
 for scenario, group in power_data.groupby("Traffic-scenario"):
     group_sorted = group.sort_values("cost_per_kWh")
     pareto = []
@@ -78,16 +79,15 @@ fig.update_layout(
     margin=dict(l=10, r=10, t=30, b=20)
 )
 
-# --- Reliable point selection ---
+# --- Plot and handle interaction ---
 if "selected_weight" not in st.session_state:
-    st.session_state.selected_weight = 100  # Default value
+    st.session_state.selected_weight = 100  # default
 
 clicked_points = plotly_events(fig, click_event=True, override_height=360)
 
 if clicked_points and isinstance(clicked_points[0], dict) and "customdata" in clicked_points[0]:
     try:
-        clicked_weight = int(clicked_points[0]["customdata"])
-        st.session_state.selected_weight = clicked_weight
+        st.session_state.selected_weight = int(clicked_points[0]["customdata"])
     except Exception:
         pass
 
@@ -106,7 +106,7 @@ def display_image_autoscaled(path, caption=""):
         """
         st.markdown(html, unsafe_allow_html=True)
 
-# --- Filter scenarios ---
+# --- Filter data ---
 data_acc = power_data[
     (power_data["Traffic-scenario"] == "45-mins-accident-1-capacity-remaining-start-10am") &
     (power_data["rounded_weight"] == selected_weight)
@@ -122,15 +122,15 @@ cols_to_display = [
     "demands_fully_met", "energy_cost_all"
 ]
 
-# --- Side-by-side scenario comparison ---
+# --- Scenario comparison ---
 st.subheader("Scenario Comparison")
 col1, col2 = st.columns(2)
 
 with col1:
     st.markdown("**No-Accident Scenario**")
-    path_nacc = f"images/jpg_output/d_-1_no-accidentOffline-cap-1300-runnum-1_weight_{selected_weight}_page1.jpg"
-    if os.path.exists(path_nacc):
-        display_image_autoscaled(path_nacc, caption="No-Accident Scenario")
+    path = f"images/jpg_output/d_-1_no-accidentOffline-cap-1300-runnum-1_weight_{selected_weight}_page1.jpg"
+    if os.path.exists(path):
+        display_image_autoscaled(path, caption="No-Accident Scenario")
     else:
         st.warning("Image not found.")
     if not data_nacc.empty:
@@ -138,9 +138,9 @@ with col1:
 
 with col2:
     st.markdown("**Accident Scenario**")
-    path_acc = f"images/jpg_output/d_-1_45-mins-accident-1-capacity-remaining-start-10amOffline-cap-1300-runnum-1_weight_{selected_weight}_page1.jpg"
-    if os.path.exists(path_acc):
-        display_image_autoscaled(path_acc, caption="Accident Scenario")
+    path = f"images/jpg_output/d_-1_45-mins-accident-1-capacity-remaining-start-10amOffline-cap-1300-runnum-1_weight_{selected_weight}_page1.jpg"
+    if os.path.exists(path):
+        display_image_autoscaled(path, caption="Accident Scenario")
     else:
         st.warning("Image not found.")
     if not data_acc.empty:
