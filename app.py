@@ -21,6 +21,10 @@ power_data["cost_per_kWh"] = power_data["energy_cost_all"] / (power_data["total_
 power_data["rounded_weight"] = power_data["weight_obj_cost"].round().astype(int)
 power_data["ratio_TOU_TED"] = power_data["weight_obj_cost"] / 30
 
+# Reset index to ensure stable row reference
+power_data = power_data.reset_index(drop=True)
+power_data["data_index"] = power_data.index
+
 # --- Abbreviation note ---
 st.markdown("""
 > **Note:**  
@@ -48,7 +52,7 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
         mode="markers",
         name=scenario,
         marker=dict(size=6, opacity=0.7, symbol=symbol),
-        customdata=group[["weight_obj_cost"]].values,  # Ensure 2D
+        customdata=group[["data_index"]].values,  # Use index to link clicks
         hovertemplate="Ratio (TOU/TED): %{customdata[0]:.2f}<extra></extra>",
     ))
 
@@ -79,18 +83,18 @@ fig.update_layout(
     margin=dict(l=10, r=10, t=30, b=20)
 )
 
-# --- Initialize session state ---
+# --- Initialize session state once ---
 if "selected_weight" not in st.session_state:
     st.session_state.selected_weight = 100
 
-# --- Handle interaction ---
+# --- Handle interaction via data index ---
 clicked_points = plotly_events(fig, click_event=True, override_height=360)
 
 if clicked_points and isinstance(clicked_points[0], dict):
     try:
-        weight_val = clicked_points[0]["customdata"][0]
-        if weight_val is not None:
-            st.session_state.selected_weight = int(round(float(weight_val)))
+        data_index = int(clicked_points[0]["customdata"][0])
+        selected_row = power_data.loc[data_index]
+        st.session_state.selected_weight = int(round(float(selected_row["weight_obj_cost"])))
     except Exception as e:
         st.error(f"Error extracting clicked weight: {e}")
 
