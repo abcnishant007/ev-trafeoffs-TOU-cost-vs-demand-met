@@ -21,9 +21,8 @@ power_data["cost_per_kWh"] = power_data["energy_cost_all"] / (power_data["total_
 power_data["rounded_weight"] = power_data["weight_obj_cost"].round().astype(int)
 power_data["ratio_TOU_TED"] = power_data["weight_obj_cost"] / 30
 
-# Reset index to ensure stable row reference
+# Reset index for row lookup
 power_data = power_data.reset_index(drop=True)
-power_data["data_index"] = power_data.index
 
 # --- Abbreviation note ---
 st.markdown("""
@@ -38,25 +37,27 @@ st.markdown("""
 st.subheader("Click on a Point to View Scenario Comparison")
 
 fig = go.Figure()
+
+# Marker types
 marker_map = {
     "no-accident": "circle",
     "45-mins-accident-1-capacity-remaining-start-10am": "x"
 }
 
-# Scatter points
+# --- Scatter points (faint for non-Pareto) ---
 for scenario, group in power_data.groupby("Traffic-scenario"):
     symbol = marker_map.get(scenario, "circle")
     fig.add_trace(go.Scatter(
         x=group["cost_per_kWh"],
         y=group["proportion_delivered"],
         mode="markers",
-        name=scenario,
-        marker=dict(size=6, opacity=0.7, symbol=symbol),
-        customdata=group[["data_index"]].values,
-        hovertemplate="Ratio (TOU/TED): %{customdata[0]:.2f}<extra></extra>",
+        name=f"{scenario} (all)",
+        marker=dict(size=6, opacity=0.3, symbol=symbol),
+        hovertext=group["weight_obj_cost"].round(2).astype(str),
+        hovertemplate="TOU/TED Weight: %{hovertext}<extra></extra>",
     ))
 
-# Pareto curves
+# --- Pareto curves (bold lines) ---
 for scenario, group in power_data.groupby("Traffic-scenario"):
     group_sorted = group.sort_values("cost_per_kWh")
     pareto = []
@@ -83,24 +84,22 @@ fig.update_layout(
     margin=dict(l=10, r=10, t=30, b=20)
 )
 
-# --- Initialize session state ---
+# --- Initialize session state once ---
 if "selected_weight" not in st.session_state:
     st.session_state.selected_weight = 100
 
-# --- Handle click interaction ---
+# --- Handle click using pointIndex ---
 clicked_points = plotly_events(fig, click_event=True, override_height=360)
 st.write("🔍 Raw clicked point data:", clicked_points)
 
 if clicked_points and isinstance(clicked_points[0], dict):
     try:
-        if "customdata" in clicked_points[0]:
-            data_index = int(clicked_points[0]["customdata"][0])
-            selected_row = power_data.loc[data_index]
+        point_index = clicked_points[0].get("pointIndex")
+        if point_index is not None:
+            selected_row = power_data.iloc[point_index]
             st.session_state.selected_weight = int(round(float(selected_row["weight_obj_cost"])))
-        else:
-            st.warning("⚠️ No 'customdata' found in clicked point.")
     except Exception as e:
-        st.error(f"Error extracting clicked weight: {e}")
+        st.error(f"Error extracting clicked weight using pointIndex: {e}")
 
 # --- Use selected value ---
 selected_weight = st.session_state.selected_weight
