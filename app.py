@@ -20,8 +20,6 @@ power_data = power_data[power_data["CUTOFF_TIME_FOR_RESULTS_MIXING"] == -1].copy
 power_data["cost_per_kWh"] = power_data["energy_cost_all"] / (power_data["total_energy_delivered"] + 1e-8)
 power_data["rounded_weight"] = power_data["weight_obj_cost"].round().astype(int)
 power_data["ratio_TOU_TED"] = power_data["weight_obj_cost"] / 30
-
-# Reset index for row lookup
 power_data = power_data.reset_index(drop=True)
 
 # --- Abbreviation note ---
@@ -38,27 +36,30 @@ st.subheader("Click on a Point to View Scenario Comparison")
 
 fig = go.Figure()
 
-# Marker types
+# Marker types and colors
 marker_map = {
-    "no-accident": "circle",
-    "45-mins-accident-1-capacity-remaining-start-10am": "x"
+    "no-accident": ("circle", "#FFA500"),      # orange
+    "45-mins-accident-1-capacity-remaining-start-10am": ("x", "#1f77b4"),  # tab:blue
 }
+grey_color = "rgba(120,120,120,0.3)"  # non-Pareto blobs
 
-# --- Scatter points (faint for non-Pareto) ---
+# Scatter blobs (non-Pareto)
 for scenario, group in power_data.groupby("Traffic-scenario"):
-    symbol = marker_map.get(scenario, "circle")
+    symbol, _ = marker_map.get(scenario, ("circle", grey_color))
     fig.add_trace(go.Scatter(
         x=group["cost_per_kWh"],
         y=group["proportion_delivered"],
         mode="markers",
-        name=f"{scenario} (all)",
-        marker=dict(size=6, opacity=0.3, symbol=symbol),
+        name=f"{scenario} (non-Pareto)",
+        marker=dict(size=6, opacity=0.3, symbol=symbol, color=grey_color),
         hovertext=group["weight_obj_cost"].round(2).astype(str),
         hovertemplate="TOU/TED Weight: %{hovertext}<extra></extra>",
+        showlegend=False
     ))
 
-# --- Pareto curves (bold lines) ---
+# Pareto curves and highlighted points
 for scenario, group in power_data.groupby("Traffic-scenario"):
+    symbol, color = marker_map.get(scenario, ("circle", "#000000"))
     group_sorted = group.sort_values("cost_per_kWh")
     pareto = []
     max_y = -float("inf")
@@ -67,13 +68,27 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
             pareto.append(row)
             max_y = row["proportion_delivered"]
     pareto_df = pd.DataFrame(pareto)
+
+    # Pareto line
     fig.add_trace(go.Scatter(
         x=pareto_df["cost_per_kWh"],
         y=pareto_df["proportion_delivered"],
         mode="lines",
         name=f"{scenario} Pareto",
-        line=dict(width=2),
+        line=dict(width=2, color=color),
         hoverinfo="skip"
+    ))
+
+    # Pareto points
+    fig.add_trace(go.Scatter(
+        x=pareto_df["cost_per_kWh"],
+        y=pareto_df["proportion_delivered"],
+        mode="markers",
+        name=f"{scenario} Pareto Points",
+        marker=dict(size=6, symbol=symbol, color=color),
+        hovertext=pareto_df["weight_obj_cost"].round(2).astype(str),
+        hovertemplate="TOU/TED Weight: %{hovertext}<extra></extra>",
+        showlegend=False
     ))
 
 fig.update_layout(
@@ -84,14 +99,12 @@ fig.update_layout(
     margin=dict(l=10, r=10, t=30, b=20)
 )
 
-# --- Initialize session state once ---
+# --- Initialize session state ---
 if "selected_weight" not in st.session_state:
     st.session_state.selected_weight = 100
 
-# --- Handle click using pointIndex ---
+# --- Click interaction using pointIndex ---
 clicked_points = plotly_events(fig, click_event=True, override_height=360)
-st.write("🔍 Raw clicked point data:", clicked_points)
-
 if clicked_points and isinstance(clicked_points[0], dict):
     try:
         point_index = clicked_points[0].get("pointIndex")
@@ -101,11 +114,11 @@ if clicked_points and isinstance(clicked_points[0], dict):
     except Exception as e:
         st.error(f"Error extracting clicked weight using pointIndex: {e}")
 
-# --- Use selected value ---
+# --- Show selected ratio only ---
 selected_weight = st.session_state.selected_weight
-st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}** (Weight: {selected_weight})")
+st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}**")
 
-# --- Auto-scale image display ---
+# --- Image display function ---
 def display_image_autoscaled(path, caption=""):
     with open(path, "rb") as f:
         encoded = b64encode(f.read()).decode()
@@ -117,7 +130,7 @@ def display_image_autoscaled(path, caption=""):
         """
         st.markdown(html, unsafe_allow_html=True)
 
-# --- Get matched scenarios ---
+# --- Load matching rows ---
 data_acc = power_data[
     (power_data["Traffic-scenario"] == "45-mins-accident-1-capacity-remaining-start-10am") &
     (power_data["rounded_weight"] == selected_weight)
@@ -133,7 +146,7 @@ cols_to_display = [
     "demands_fully_met", "energy_cost_all"
 ]
 
-# --- Side-by-side comparison ---
+# --- Scenario Comparison UI ---
 st.subheader("Scenario Comparison")
 col1, col2 = st.columns(2)
 
