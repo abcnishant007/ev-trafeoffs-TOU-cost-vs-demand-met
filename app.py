@@ -34,7 +34,6 @@ st.markdown("""
 st.subheader("Click on a Point to View Scenario Comparison")
 
 fig = go.Figure()
-
 marker_map = {
     "no-accident": "circle",
     "45-mins-accident-1-capacity-remaining-start-10am": "x"
@@ -52,6 +51,7 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
         hovertemplate="Ratio (TOU/TED): %{customdata:.2f}<extra></extra>",
     ))
 
+# Add Pareto curves
 for scenario, group in power_data.groupby("Traffic-scenario"):
     group_sorted = group.sort_values("cost_per_kWh")
     pareto = []
@@ -78,22 +78,23 @@ fig.update_layout(
     margin=dict(l=10, r=10, t=30, b=20)
 )
 
-# --- Click handling ---
-if "last_clicked" not in st.session_state:
-    st.session_state.last_clicked = 100  # default
+# --- Reliable point selection ---
+if "selected_weight" not in st.session_state:
+    st.session_state.selected_weight = 100  # Default value
 
 clicked_points = plotly_events(fig, click_event=True, override_height=360)
 
 if clicked_points and isinstance(clicked_points[0], dict) and "customdata" in clicked_points[0]:
     try:
-        st.session_state.last_clicked = int(clicked_points[0]["customdata"])
+        clicked_weight = int(clicked_points[0]["customdata"])
+        st.session_state.selected_weight = clicked_weight
     except Exception:
         pass
 
-selected_weight = st.session_state.last_clicked
+selected_weight = st.session_state.selected_weight
 st.markdown(f"### 🔍 Selected TOU/TED Ratio: **{selected_weight / 30:.2f}** (Weight: {selected_weight})")
 
-# --- Display helper ---
+# --- Auto-scale image display ---
 def display_image_autoscaled(path, caption=""):
     with open(path, "rb") as f:
         encoded = b64encode(f.read()).decode()
@@ -105,7 +106,7 @@ def display_image_autoscaled(path, caption=""):
         """
         st.markdown(html, unsafe_allow_html=True)
 
-# --- Scenario filtering ---
+# --- Filter scenarios ---
 data_acc = power_data[
     (power_data["Traffic-scenario"] == "45-mins-accident-1-capacity-remaining-start-10am") &
     (power_data["rounded_weight"] == selected_weight)
