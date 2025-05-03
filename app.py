@@ -94,10 +94,18 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
 fig.update_layout(
     xaxis=dict(title="TOU Cost ($/kWh)", range=[0, 0.15]),
     yaxis=dict(title="Energy Demand Met (%)", range=[65, 105]),
-    height=360,
-    legend=dict(font=dict(size=10)),
-    margin=dict(l=10, r=10, t=30, b=20)
+    height=500,
+    width=850,
+    margin=dict(l=60, r=60, t=40, b=60),
+    legend=dict(
+        font=dict(size=10),
+        orientation="v",
+        x=1.02,
+        y=1,
+        xanchor="left"
+    )
 )
+
 
 # --- Initialize session state ---
 if "selected_weight" not in st.session_state:
