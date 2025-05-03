@@ -51,7 +51,7 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
         y=group["proportion_delivered"],
         mode="markers",
         name=f"{scenario} (non-Pareto)",
-        marker=dict(size=6, opacity=0.3, symbol=symbol, color=grey_color),
+        marker=dict(size=8, opacity=0.4, symbol=symbol, color=grey_color),
         hovertext=group["weight_obj_cost"].round(2).astype(str),
         hovertemplate="TOU/TED Weight: %{hovertext}<extra></extra>",
         showlegend=False
@@ -75,7 +75,7 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
         y=pareto_df["proportion_delivered"],
         mode="lines",
         name=f"{scenario} Pareto",
-        line=dict(width=2, color=color),
+        line=dict(width=3, color=color),
         hoverinfo="skip"
     ))
 
