@@ -52,7 +52,7 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
         mode="markers",
         name=scenario,
         marker=dict(size=6, opacity=0.7, symbol=symbol),
-        customdata=group[["data_index"]].values,  # Use index to link clicks
+        customdata=group[["data_index"]].values,
         hovertemplate="Ratio (TOU/TED): %{customdata[0]:.2f}<extra></extra>",
     ))
 
@@ -83,18 +83,22 @@ fig.update_layout(
     margin=dict(l=10, r=10, t=30, b=20)
 )
 
-# --- Initialize session state once ---
+# --- Initialize session state ---
 if "selected_weight" not in st.session_state:
     st.session_state.selected_weight = 100
 
-# --- Handle interaction via data index ---
+# --- Handle click interaction ---
 clicked_points = plotly_events(fig, click_event=True, override_height=360)
+st.write("🔍 Raw clicked point data:", clicked_points)
 
 if clicked_points and isinstance(clicked_points[0], dict):
     try:
-        data_index = int(clicked_points[0]["customdata"][0])
-        selected_row = power_data.loc[data_index]
-        st.session_state.selected_weight = int(round(float(selected_row["weight_obj_cost"])))
+        if "customdata" in clicked_points[0]:
+            data_index = int(clicked_points[0]["customdata"][0])
+            selected_row = power_data.loc[data_index]
+            st.session_state.selected_weight = int(round(float(selected_row["weight_obj_cost"])))
+        else:
+            st.warning("⚠️ No 'customdata' found in clicked point.")
     except Exception as e:
         st.error(f"Error extracting clicked weight: {e}")
 
@@ -142,7 +146,7 @@ with col1:
     else:
         st.warning("Image not found.")
     if not data_nacc.empty:
-        st.dataframe(data_nacc[cols_to_display].transpose())
+        st.dataframe(data_nacc[cols_to_display].astype(str).transpose())
 
 with col2:
     st.markdown("**Accident Scenario**")
@@ -152,4 +156,4 @@ with col2:
     else:
         st.warning("Image not found.")
     if not data_acc.empty:
-        st.dataframe(data_acc[cols_to_display].transpose())
+        st.dataframe(data_acc[cols_to_display].astype(str).transpose())
