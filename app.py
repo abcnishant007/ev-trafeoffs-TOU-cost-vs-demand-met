@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-from PIL import Imagemark
+from PIL import Image
 from base64 import b64encode
 import plotly.graph_objects as go
 
