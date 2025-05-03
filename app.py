@@ -41,7 +41,7 @@ for scenario, group in power_data.groupby("Traffic-scenario"):
         mode="markers",
         name=scenario,
         marker=dict(
-            size=np.log(group["weight_ratio"] + 10),  # tweak scaling if needed
+            size=1, # np.log(group["weight_ratio"] + 10),  # tweak scaling if needed
             opacity=0.6,
             sizemode="diameter"
         ),
